@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Scan Result | HeaderShield</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/app.css" rel="stylesheet">
+    <script src="/static/js/theme.js" defer></script>
+</head>
+<body class="dark-mode">
+<div class="page-shell">
+    <nav class="navbar navbar-expand-lg glass-nav">
+        <div class="container py-2">
+            <a class="navbar-brand d-flex align-items-center gap-3" href="/">
+                <span class="brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
+                <span class="brand-title"><span class="logo-text">HeaderShield</span></span>
+            </a>
+
+            <button class="navbar-toggler btn btn-ghost" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <div class="collapse navbar-collapse" id="mainNav">
+                <div class="navbar-nav mx-auto nav-center text-center">
+                    <a class="nav-link-soft" href="/">Scan</a>
+                    <a class="nav-link-soft" href="/history">History</a>
+                    <a class="nav-link-soft active" href="#export">Report</a>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 ms-lg-3">
+                    <button id="themeToggle" class="theme-toggle" type="button">
+                        <i id="themeIcon" class="fa-solid fa-sun"></i>
+                    </button>
+                    <button id="reportShareButton" class="btn-accent" type="button" data-bs-toggle="modal" data-bs-target="#shareReportModal">
+                        <i class="fa-solid fa-share-nodes me-2"></i>Share Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container py-5 result-container">
+        <div class="row g-4 mb-4 align-items-start">
+            <div class="col-12">
+                <div class="dashboard-card h-100">
+                    <span class="eyebrow mb-3"><i class="fa-solid fa-fingerprint"></i>Security Header Report</span>
+                    <h1 class="hero-title fs-1 mb-3 title-with-icon">
+                        <span class="title-icon"><i class="fa-solid fa-shield-halved"></i></span>
+                        <span class="report-title">{{ url }}</span>
+                    </h1>
+                    <p class="hero-copy mb-0">Review the response, risks, and next fixes.</p>
+                </div>
+            </div>
+        </div>
+
+        {% if analysis %}
+        <div class="dashboard-card section-block">
+            <h2 class="section-title">Summary</h2>
+            <div class="stat-grid">
+                <div class="stat-card summary-main-card">
+                    <div class="summary-main">
+                        <div class="score-block">
+                            <span class="score-value">{{ score }}%</span>
+                            <span class="score-label">Security Score</span>
+                            <div class="security-verdict verdict-{{ grade }}">
+                                Moderate risk — improvements recommended
+                            </div>
+                            <div class="analysis-type">
+                                <i class="fa-solid fa-layer-group me-1"></i>
+                                Headers Only
+                            </div>
+                        </div>
+                        <div class="grade-badge grade-{{ grade }}">{{ grade }}</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label"><i class="fa-solid fa-signal me-2"></i>HTTP Status</div>
+                    <div class="stat-value fs-4">{{ status_code }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card section-block">
+            <h2 class="section-title">Scan Intelligence</h2>
+            <div class="intelligence-grid">
+                <div class="intelligence-card">
+                    <div class="missing-header-name">Scan Time</div>
+                    <div class="detail-row"><strong>Value:</strong>{{ scan_time }}s</div>
+                </div>
+                <div class="intelligence-card">
+                    <div class="missing-header-name">Redirect Count</div>
+                    <div class="detail-row"><strong>Value:</strong>{{ redirect_count }}</div>
+                </div>
+                <div class="intelligence-card">
+                    <div class="missing-header-name">Response Size</div>
+                    <div class="detail-row"><strong>Value:</strong>{{ response_size }} bytes</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card section-block">
+            <h2 class="section-title">Redirect Analysis</h2>
+            <div class="missing-header-list">
+                <div class="missing-header-card upcoming-header-card">
+                    <div class="detail-row"><strong>Final URL:</strong>{{ final_url }}</div>
+                    <div class="detail-row"><strong>Secure Upgrade:</strong>{% if secure_upgrade %}Yes{% else %}No{% endif %}</div>
+                    <div class="detail-row"><strong>HTTPS Downgrade:</strong>{% if downgrade_detected %}Detected{% else %}Not detected{% endif %}</div>
+                </div>
+            </div>
+            {% if redirect_chain %}
+            <div class="raw-headers-block">
+                {% for redirect_url in redirect_chain %}
+                <div class="raw-header-line"><span class="raw-header-name">Hop {{ loop.index0 }}</span>: <span class="raw-header-value">{{ redirect_url }}</span></div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="muted-panel">No redirects detected.</div>
+            {% endif %}
+        </div>
+
+        <div class="dashboard-card section-block">
+            <h2 class="section-title">Missing Headers</h2>
+            {% if missing_headers %}
+            <div class="missing-header-list">
+                {% for item in missing_headers %}
+                <div class="missing-header-card">
+                    <div class="missing-header-name">{{ item.name }}</div>
+                    <div class="detail-row"><strong>Risk:</strong>{{ item.explanation }}</div>
+                    <div class="detail-row"><strong>Impact:</strong>{{ item.impact }}</div>
+                    <div class="detail-row"><strong>Fix:</strong>{{ item.recommendation }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="muted-panel">No missing headers in the monitored set.</div>
+            {% endif %}
+        </div>
+
+        <div class="dashboard-card section-block">
+            <h2 class="section-title">Warnings</h2>
+            {% if warnings %}
+            <div class="missing-header-list">
+                {% for warning in warnings %}
+                <div class="missing-header-card warning-card">
+                    <div class="missing-header-name">{{ warning.title }}</div>
+                    <div class="detail-row"><strong>Risk:</strong>{{ warning.explanation }}</div>
+                    <div class="detail-row"><strong>Impact:</strong>{{ warning.impact }}</div>
+                    <div class="detail-row"><strong>Fix:</strong>{{ warning.recommendation }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="muted-panel">No warnings from the monitored headers.</div>
+            {% endif %}
+        </div>
+
+        <div class="dashboard-card section-block">
+            <h2 class="section-title">Header Analysis</h2>
+            <div class="header-analysis-grid">
+                {% for item in header_analysis %}
+                <div class="dashboard-card header-card">
+                    <div class="header-card-top">
+                        <div>
+                            <div class="fw-semibold">{{ item.name }}</div>
+                            <div class="header-value {% if item.value and item.value|length > 120 %}is-long{% else %}is-short{% endif %} mt-1">{{ item.value }}</div>
+                        </div>
+                        <span class="badge {% if item.status == 'Present' %}text-bg-success{% elif item.status == 'Weak' %}text-bg-warning{% else %}text-bg-danger{% endif %}">
+                            {{ item.display_status or item.status }}
+                        </span>
+                    </div>
+
+                    <div class="header-divider"></div>
+
+                    <div class="detail-row"><strong>Risk:</strong>{{ item.explanation }}</div>
+                    <div class="detail-row"><strong>Impact:</strong>{{ item.impact }}</div>
+                    <div class="detail-row"><strong>Assessment:</strong>{{ item.details }}</div>
+
+                    {% if item.recommendation %}
+                    <div class="detail-row"><strong>Fix:</strong>{{ item.recommendation }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="dashboard-card section-block">
+            <h2 class="section-title">Raw Headers</h2>
+            {% if raw_headers %}
+            <div class="raw-headers-block">
+                {% for header in raw_headers %}
+                <div class="raw-header-line"><span class="raw-header-name">{{ header.name }}</span>: <span class="raw-header-value">{{ header.value }}</span></div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="muted-panel">No raw headers captured.</div>
+            {% endif %}
+        </div>
+
+        <div class="dashboard-card section-block">
+            <h2 class="section-title">Cookie Security Issues</h2>
+            {% if cookie_issues %}
+            <div class="missing-header-list">
+                {% for item in cookie_issues %}
+                <div class="missing-header-card info-disclosure-card">
+                    <div class="missing-header-name">{{ item.cookie }}</div>
+                    <div class="detail-row"><strong>Risk:</strong>{{ item.issue }}. {{ item.explanation }}</div>
+                    <div class="detail-row"><strong>Impact:</strong>{{ item.impact }}</div>
+                    <div class="detail-row"><strong>Fix:</strong>{{ item.recommendation }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="muted-panel">No cookie flag issues detected.</div>
+            {% endif %}
+        </div>
+
+        <div class="dashboard-card section-block">
+            <h2 class="section-title">TLS / HTTPS Info</h2>
+            <div class="missing-header-list">
+                <div class="missing-header-card upcoming-header-card">
+                    <div class="detail-row"><strong>Uses HTTPS:</strong>{% if uses_https %}Yes{% else %}No{% endif %}</div>
+                    <div class="detail-row"><strong>SSL Valid:</strong>{% if ssl_valid %}Yes{% else %}No{% endif %}</div>
+                    <div class="detail-row"><strong>SSL Issuer:</strong>{{ ssl_issuer or 'Not available' }}</div>
+                    <div class="detail-row"><strong>Expiry Days:</strong>{% if ssl_expiry_days is not none %}{{ ssl_expiry_days }}{% else %}Not available{% endif %}</div>
+                    <div class="detail-row"><strong>Expired:</strong>{% if ssl_expired %}Yes{% else %}No{% endif %}</div>
+                    <div class="detail-row"><strong>Near Expiry:</strong>{% if ssl_near_expiry %}Yes{% else %}No{% endif %}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card section-block">
+            <h2 class="section-title">Mixed Content Warning</h2>
+            {% if mixed_content %}
+            <div class="missing-header-card warning-card">
+                <div class="missing-header-name">Mixed content detected</div>
+                <div class="detail-row"><strong>Risk:</strong>The HTTPS page references one or more HTTP resources.</div>
+                <div class="detail-row"><strong>Impact:</strong>Mixed content can weaken transport security and trigger browser blocking.</div>
+                <div class="detail-row"><strong>Fix:</strong>Fix: Update all embedded resource URLs to use HTTPS.</div>
+            </div>
+            {% else %}
+            <div class="muted-panel">No mixed content detected in the analyzed HTML.</div>
+            {% endif %}
+        </div>
+
+        <div class="dashboard-card section-block">
+            <h2 class="section-title">Additional Information</h2>
+            {% if informational_headers %}
+            <div class="missing-header-list">
+                {% for item in informational_headers %}
+                <div class="missing-header-card info-disclosure-card">
+                    <div class="missing-header-name">{{ item.name }}</div>
+                    <div class="detail-row"><strong>Current Value:</strong>{{ item.value }}</div>
+                    <div class="detail-row"><strong>Risk:</strong>{{ item.issue }}. {{ item.explanation }}</div>
+                    <div class="detail-row"><strong>Impact:</strong>{{ item.impact }}</div>
+                    <div class="detail-row"><strong>Fix:</strong>{{ item.recommendation }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="muted-panel">No information disclosure headers detected.</div>
+            {% endif %}
+        </div>
+
+        <div class="dashboard-card section-block">
+            <h2 class="section-title">Upcoming Headers</h2>
+            {% if upcoming_headers %}
+            <div class="missing-header-list">
+                {% for item in upcoming_headers %}
+                <div class="missing-header-card upcoming-header-card">
+                    <div class="missing-header-name">{{ item.name }}</div>
+                    <div class="detail-row"><strong>Risk:</strong>{{ item.explanation }}</div>
+                    <div class="detail-row"><strong>Impact:</strong>{{ item.impact }}</div>
+                    <div class="detail-row"><strong>Fix:</strong>{{ item.recommendation }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="muted-panel">No upcoming cross-origin header gaps detected.</div>
+            {% endif %}
+        </div>
+
+        <div class="dashboard-card section-block">
+            <h2 class="section-title">Vulnerabilities</h2>
+            {% if vulnerabilities %}
+                {% for vuln in vulnerabilities %}
+                <div class="vuln-card vuln-{{ vuln.severity.lower() }}">
+                    <div class="vuln-title">
+                        <span class="vuln-title-text">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span>{{ vuln.title }}</span>
+                        </span>
+                        <span class="severity-chip severity-badge severity-{{ vuln.severity.lower() }}">{{ vuln.severity }}</span>
+                    </div>
+                    <div class="detail-row"><strong>Severity:</strong>{{ vuln.severity }}</div>
+                    {% if vuln.triggers %}
+                    <div class="detail-row"><strong>Triggered By:</strong></div>
+                    <ul class="recommendation-bullets mt-2">
+                        {% for trigger in vuln.triggers %}
+                        <li>{{ trigger }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="detail-row"><strong>Triggered By:</strong>{{ vuln.header }} ({{ vuln.status }})</div>
+                    {% endif %}
+                    <div class="detail-row"><strong>Risk:</strong>{{ vuln.explanation or vuln.description }}</div>
+                    <div class="detail-row"><strong>Impact:</strong>{{ vuln.impact }}</div>
+                    {% if vuln.recommendation %}
+                    <div class="detail-row"><strong>Fix:</strong>{{ vuln.recommendation }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="muted-panel">No mapped risks from the monitored headers.</div>
+            {% endif %}
+        </div>
+
+        <div class="dashboard-card section-block">
+            <h2 class="section-title">Recommendations</h2>
+            <ul class="recommendation-bullets">
+                {% for r in recommendations %}
+                <li>{{ r }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="dashboard-card report-section-card">
+            <h2 class="section-title">Disclaimer</h2>
+            <div class="info-panel">
+                This analysis is based solely on HTTP security headers observed in the response.
+                Absence or misconfiguration of headers does not always indicate a real vulnerability.
+                Modern applications may implement security controls beyond standard headers.
+                This tool provides a surface-level assessment and should not be considered a full security audit.
+            </div>
+        </div>
+
+        <div id="export" class="dashboard-card report-section-card">
+            <h2 class="section-title">Export Report</h2>
+            <p class="hero-copy mb-4">Download this scan as a PDF.</p>
+            <form method="POST" action="/download-report">
+                <input type="hidden" name="url" value="{{ url }}">
+                <input type="hidden" name="timestamp" value="{{ timestamp }}">
+                <input type="hidden" name="status_code" value="{{ status_code }}">
+                <input type="hidden" name="score" value="{{ score }}">
+                <input type="hidden" name="grade" value="{{ grade }}">
+                <input type="hidden" name="analysis_json" value='{{ analysis|tojson }}'>
+                <input type="hidden" name="vulnerabilities_json" value='{{ vulnerabilities|tojson }}'>
+                <input type="hidden" name="recommendations_json" value='{{ recommendations|tojson }}'>
+                <input type="hidden" name="warnings_json" value='{{ warnings|tojson }}'>
+                <input type="hidden" name="upcoming_headers_json" value='{{ upcoming_headers|tojson }}'>
+                <input type="hidden" name="informational_headers_json" value='{{ informational_headers|tojson }}'>
+                <input type="hidden" name="cookie_issues_json" value='{{ cookie_issues|tojson }}'>
+                <input type="hidden" name="raw_headers_json" value='{{ raw_headers|tojson }}'>
+                <input type="hidden" name="error_message" value="{{ error_message or '' }}">
+                <button class="btn-accent" type="submit">
+                    <i class="fa-solid fa-file-arrow-down me-2"></i>Download PDF Report
+                </button>
+            </form>
+        </div>
+
+        {% endif %}
+    </main>
+</div>
+
+<div class="modal fade" id="shareReportModal" tabindex="-1" aria-labelledby="shareReportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content share-report-modal">
+            <div class="modal-header border-0 pb-2">
+                <div>
+                    <h5 class="modal-title" id="shareReportModalLabel">Share Report</h5>
+                    <p class="modal-subtitle mb-0">Share this scan result</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white modal-close-soft" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <div class="share-report-actions">
+                    <a
+                        class="share-report-option"
+                        href="#"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-share-modal="whatsapp"
+                        data-share-url="{{ request.url }}"
+                        data-share-text="Check this website security report generated using HeaderShield"
+                    >
+                        <i class="fa-brands fa-whatsapp"></i>
+                        <span>WhatsApp</span>
+                    </a>
+                    <a
+                        class="share-report-option"
+                        href="#"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-share-modal="twitter"
+                        data-share-url="{{ request.url }}"
+                        data-share-text="Check this website security report generated using HeaderShield"
+                    >
+                        <i class="fa-brands fa-x-twitter"></i>
+                        <span>Twitter (X)</span>
+                    </a>
+                    <button
+                        id="copyReportLinkButton"
+                        class="share-report-option"
+                        type="button"
+                        data-share-modal="copy"
+                        data-share-url="{{ request.url }}"
+                    >
+                        <i class="fa-solid fa-link"></i>
+                        <span>Copy Link</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="reportShareToast" class="toast share-toast border-0" role="status" aria-live="polite" aria-atomic="true">
+        <div class="toast-body">Link copied</div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HeaderShield Security Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #1f2937;
+            margin: 0;
+            padding: 32px;
+            line-height: 1.6;
+            font-size: 14px;
+            background: #ffffff;
+        }
+
+        .report-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .report-header h1 {
+            margin: 0 0 10px;
+            font-size: 28px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .report-meta {
+            margin: 4px 0;
+            color: #4b5563;
+            word-break: break-word;
+        }
+
+        .section {
+            margin-bottom: 24px;
+            padding: 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            background: #ffffff;
+            page-break-inside: avoid;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 12px;
+            color: #111827;
+        }
+
+        .summary-section {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .summary-url {
+            margin-bottom: 14px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            word-break: break-word;
+        }
+
+        .summary-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .summary-card {
+            padding: 16px;
+            margin-bottom: 16px;
+            border-radius: 8px;
+            background: #f9fafb;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+        }
+
+        .card-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .card-value {
+            font-size: 22px;
+            font-weight: bold;
+            color: #111827;
+        }
+
+        .item-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+            background: #ffffff;
+            page-break-inside: avoid;
+        }
+
+        .title-row {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #111827;
+        }
+
+        .block {
+            margin-bottom: 8px;
+        }
+
+        .block strong {
+            color: #111827;
+        }
+
+        .vuln {
+            border-left: 4px solid;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+            page-break-inside: avoid;
+        }
+
+        .vuln-high {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .vuln-medium {
+            border-color: #f59e0b;
+            background: #fffbeb;
+        }
+
+        .vuln-low {
+            border-color: #22c55e;
+            background: #f0fdf4;
+        }
+
+        .raw-box {
+            background: #111827;
+            color: #e5e7eb;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .raw-line {
+            margin-bottom: 6px;
+        }
+
+        ul {
+            margin: 10px 0 0 18px;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .muted {
+            color: #6b7280;
+        }
+
+        @media print {
+            .summary-section {
+                margin-bottom: 10px;
+            }
+
+            .summary-card {
+                padding: 12px;
+            }
+
+            body {
+                zoom: 0.9;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="report-header">
+        <h1>HeaderShield Security Report</h1>
+        <div class="report-meta"><strong>URL:</strong> {{ url }}</div>
+        {% if timestamp %}
+        <div class="report-meta"><strong>Generated:</strong> {{ timestamp }}</div>
+        {% endif %}
+    </div>
+
+    <div class="section summary-section">
+        <h2 class="section-title">Summary</h2>
+        <div class="summary-url"><strong>Target:</strong> {{ url }}</div>
+        <div class="summary-container">
+            <div class="summary-card">
+                <div class="card-label">Score</div>
+                <div class="card-value">{{ score }}%</div>
+            </div>
+            <div class="summary-card">
+                <div class="card-label">Grade</div>
+                <div class="card-value">{{ grade }}</div>
+            </div>
+            <div class="summary-card">
+                <div class="card-label">Status</div>
+                <div class="card-value">{{ status_code }}</div>
+            </div>
+        </div>
+    </div>
+
+    {% if error_message %}
+    <div class="section">
+        <h2 class="section-title">Scan Error</h2>
+        <div class="item-card">{{ error_message }}</div>
+    </div>
+    {% else %}
+    <div class="section">
+        <h2 class="section-title">Missing Headers</h2>
+        {% if missing_headers %}
+            {% for item in missing_headers %}
+            <div class="item-card">
+                <div class="title-row">{{ item.name }}</div>
+                <div class="block"><strong>Risk:</strong> {{ item.explanation }}</div>
+                <div class="block"><strong>Impact:</strong> {{ item.impact }}</div>
+                {% if item.recommendation %}
+                <div class="block"><strong>Fix:</strong> {{ item.recommendation|replace('Fix: Fix:', 'Fix:') }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="item-card muted">No missing headers detected.</div>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Warnings</h2>
+        {% if warnings %}
+            {% for warning in warnings %}
+            <div class="item-card">
+                <div class="title-row">{{ warning.title }}</div>
+                <div class="block"><strong>Risk:</strong> {{ warning.explanation }}</div>
+                <div class="block"><strong>Impact:</strong> {{ warning.impact }}</div>
+                {% if warning.recommendation %}
+                <div class="block"><strong>Fix:</strong> {{ warning.recommendation|replace('Fix: Fix:', 'Fix:') }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="item-card muted">No warnings detected.</div>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Header Analysis</h2>
+        {% for item in header_analysis %}
+        <div class="item-card">
+            <div class="title-row">{{ item.name }} - {{ item.display_status or item.status }}</div>
+            <div class="block"><strong>Current Value:</strong> {{ item.value }}</div>
+            <div class="block"><strong>Risk:</strong> {{ item.explanation }}</div>
+            <div class="block"><strong>Impact:</strong> {{ item.impact }}</div>
+            <div class="block"><strong>Assessment:</strong> {{ item.details }}</div>
+            {% if item.recommendation %}
+            <div class="block"><strong>Fix:</strong> {{ item.recommendation|replace('Fix: Fix:', 'Fix:') }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Cookie Issues</h2>
+        {% if cookie_issues %}
+            {% for item in cookie_issues %}
+            <div class="item-card">
+                <div class="title-row">{{ item.cookie }}</div>
+                <div class="block"><strong>Risk:</strong> {{ item.issue }}. {{ item.explanation }}</div>
+                <div class="block"><strong>Impact:</strong> {{ item.impact }}</div>
+                {% if item.recommendation %}
+                <div class="block"><strong>Fix:</strong> {{ item.recommendation|replace('Fix: Fix:', 'Fix:') }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="item-card muted">No cookie flag issues detected.</div>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Vulnerabilities</h2>
+        {% if vulnerabilities %}
+            {% for vuln in vulnerabilities %}
+            <div class="vuln vuln-{{ vuln.severity.lower() }}">
+                <div class="title-row">{{ vuln.title }} - {{ vuln.severity }}</div>
+                {% if vuln.triggers %}
+                <div class="block"><strong>Triggered By:</strong></div>
+                <ul>
+                    {% for trigger in vuln.triggers %}
+                    <li>{{ trigger }}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="block"><strong>Triggered By:</strong> {{ vuln.header }} ({{ vuln.status }})</div>
+                {% endif %}
+                <div class="block"><strong>Risk:</strong> {{ vuln.explanation or vuln.description }}</div>
+                <div class="block"><strong>Impact:</strong> {{ vuln.impact }}</div>
+                {% if vuln.recommendation %}
+                <div class="block"><strong>Fix:</strong> {{ vuln.recommendation|replace('Fix: Fix:', 'Fix:') }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="item-card muted">No mapped risks detected.</div>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Recommendations</h2>
+        {% if recommendations %}
+        <ul>
+            {% for recommendation in recommendations %}
+            <li>{{ recommendation|replace('Fix: Fix:', 'Fix:') }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="item-card muted">No recommendations available.</div>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Raw Headers</h2>
+        {% if raw_headers %}
+        <div class="raw-box">
+            {% for header in raw_headers %}
+            <div class="raw-line">{{ header.name }}: {{ header.value }}</div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="item-card muted">No raw headers were captured.</div>
+        {% endif %}
+    </div>
+    {% endif %}
+</body>
+</html>
